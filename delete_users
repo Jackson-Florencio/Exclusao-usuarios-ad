@@ -1,7 +1,26 @@
-echo "# Exclusao-usuarios-ad" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/Jackson-Florencio/Exclusao-usuarios-ad.git
-git push -u origin main
+# Importa o módulo do Active Directory para ser possível trabalhar com os comandos de gerenciamento de usuários.
+Import-Module ActiveDirectory
+
+# Define o tempo de 30 dias atrás a partir da data atual.
+$time = (Get-Date).AddDays(-30)
+
+# Pega a lista de usuários membros do grupo "Suporte_Call".
+$users = Get-ADGroupMember "Suporte_Call" -recursive
+
+# Filtra os usuários que tenham LastLogonDate menor que $time e não são "veeam", "Default", "Publico" e "Administrator".
+$users = $users | Where-Object {($_.LastLogonDate -lt $time) -and ($_.SamAccountName -notin "veeam", "Default", "Publico", "Administrator")}
+
+# Para cada usuário na lista de usuários filtrados:
+foreach($user in $users) {
+    # Exclui o usuário no Active Directory, sem confirmação.
+    Remove-ADUser -Identity $user.SamAccountName -Confirm:$false
+
+    # Define o caminho da pasta do usuário.
+    $userFolder = "C:\Users\" + $user.SamAccountName
+
+    # Exclui a pasta do usuário, com recursão e forçando a exclusão.
+    Remove-Item $userFolder -Recurse -Force
+
+    # Imprime mensagem na tela informando que o usuário foi excluído com sucesso.
+    Write-Host "Usuário $($user.SamAccountName) excluído com sucesso."
+}
